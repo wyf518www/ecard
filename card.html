@@ -558,6 +558,7 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="./company.js"></script>
 <script src="./cards.js"></script>
 <script src="./_qrcode.min.js"></script>
 <script>
@@ -677,7 +678,7 @@ document.querySelectorAll(".tab").forEach((tab, i) => {
 
 /* ---------- 新增⑥：访问数据（数字滚动微交互） ---------- */
 (function countUp(){
-  const el = $("visit-num"), target = C.visitCount, dur = 1200;
+  const el = $("visit-num"), target = Number(C.visitCount) || 0, dur = 1200;
   const t0 = performance.now();
   (function tick(t){
     const p = Math.min((t - t0) / dur, 1);
@@ -805,11 +806,12 @@ function saveContact(){
 $("btn-vcf").addEventListener("click", saveContact);
 
 /* ---------- 分享名片：横版卡片图片 + 名片链接 ---------- */
-/* 当前名片的专属链接 */
+/* 当前名片的专属链接 —— 指向每人静态中转页 s/工号.html：
+ * 微信抓取它的静态标题/描述/第一张图（本人照片）生成分享卡片，
+ * 打开后自动跳回 card.html?id=xxx。（s/ 页由 make-cards.html 生成部署） */
 function cardLink(){
-  const u = new URL(location.href.split("?")[0]);
-  u.searchParams.set("id", C.id);
-  return u.href;
+  const base = location.href.split("?")[0].split("/").slice(0, -1).join("/") + "/";
+  return base + "s/" + encodeURIComponent(C.id) + ".html";
 }
 async function shareCard(){
   try {

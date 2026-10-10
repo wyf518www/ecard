@@ -15,11 +15,11 @@ RUN apk add --no-cache tzdata \
 # 自定义 Nginx 配置（gzip 压缩 / 缓存策略 / UTF-8 中文文件名支持）
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# 站点文件（名片页 + 名片数据 + 二维码库 + 图片资源）
-COPY index.html card.html cards.js _qrcode.min.js /usr/share/nginx/html/
+# 站点文件（名片墙 + 名片页 + 数据工具 + 二维码库 + 图片资源）
+COPY index.html list.html card.html make-cards.html company.js cards.js _qrcode.min.js /usr/share/nginx/html/
 COPY 广监云.png /usr/share/nginx/html/
-COPY 赵允.jpg /usr/share/nginx/html/
-COPY 微信二维码.jpg /usr/share/nginx/html/
+COPY photos/ /usr/share/nginx/html/photos/
+COPY s/ /usr/share/nginx/html/s/
 
 EXPOSE 80
 

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>名片数据生成器 · Excel → cards.js</title>
+<style>
+  :root{
+    --blue:#0044E6; --cyan:#20C4C4; --ink:#1A1A1A; --sub:#666666;
+    --line:#EDF1F7; --panel:#F7F9FE; --blue-soft:rgba(0,68,230,.08);
+    --cyan-soft:rgba(32,196,196,.28); --warn:#C77800; --err:#D4380D; --ok:#237804;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:#F2F5FA;color:var(--ink);padding:30px 16px 60px;
+    display:flex;justify-content:center;align-items:flex-start;
+  }
+  .page{width:100%;max-width:880px}
+  .topbar{height:5px;border-radius:5px 5px 0 0;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+  .wrap{background:#fff;border:1px solid var(--line);border-top:none;border-radius:0 0 18px 18px;box-shadow:0 18px 46px rgba(0,30,90,.08);padding:30px 30px 34px}
+  h1{font-size:21px;letter-spacing:1px}
+  .subtitle{margin-top:8px;color:var(--sub);font-size:12.5px;line-height:1.9}
+  .subtitle b{color:var(--blue)}
+
+  .step{margin-top:26px}
+  .step-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .step-num{
+    width:24px;height:24px;border-radius:50%;flex:none;
+    background:linear-gradient(135deg,var(--blue),#2E63F0);color:#fff;
+    display:grid;place-items:center;font-size:12.5px;font-weight:600;
+  }
+  .step-head h2{font-size:15px;letter-spacing:.5px}
+  .step-head small{color:var(--sub);font-size:11.5px}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    height:42px;padding:0 20px;border-radius:11px;border:none;cursor:pointer;
+    font-family:inherit;font-size:13px;font-weight:600;letter-spacing:.5px;
+    background:linear-gradient(135deg,#0044E6,#2E63F0);color:#fff;
+    box-shadow:0 8px 20px rgba(0,68,230,.25);transition:transform .1s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:#fff;color:var(--blue);border:1.5px solid rgba(0,68,230,.30);box-shadow:none}
+  .btn.ghost:active{background:var(--blue-soft)}
+  .btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+  textarea{
+    width:100%;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    padding:12px 14px;font-family:Consolas,Menlo,monospace;font-size:12.5px;line-height:1.7;
+    color:var(--ink);outline:none;resize:vertical;transition:border-color .15s,box-shadow .15s;
+  }
+  textarea:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,68,230,.10)}
+  #paste{height:150px}
+  #output{height:230px;background:#FBFCFE}
+
+  .or{display:flex;align-items:center;gap:12px;color:var(--sub);font-size:11.5px;margin:12px 0;letter-spacing:2px}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+  .file-line{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .file-label{
+    display:inline-flex;align-items:center;height:42px;padding:0 20px;border-radius:11px;
+    border:1.5px solid rgba(0,68,230,.30);color:var(--blue);background:#fff;cursor:pointer;
+    font-size:13px;font-weight:600;letter-spacing:.5px;
+  }
+  .file-label input{display:none}
+  .file-name{color:var(--sub);font-size:12px}
+
+  .stats{
+    display:none;margin-top:14px;padding:12px 16px;border-radius:12px;
+    background:var(--panel);border:1px solid var(--line);
+    font-size:12.5px;color:var(--sub);line-height:2;
+  }
+  .stats.show{display:block}
+  .stats b{color:var(--blue);font-variant-numeric:tabular-nums}
+  .stats .warn{color:var(--warn)}
+
+  .tablewrap{display:none;margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:360px}
+  .tablewrap.show{display:block}
+  table{border-collapse:collapse;width:100%;font-size:12px;background:#fff;min-width:720px}
+  th{
+    position:sticky;top:0;background:var(--panel);color:var(--sub);font-weight:600;
+    text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;letter-spacing:1px;
+  }
+  td{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--ink);white-space:nowrap}
+  tr:last-child td{border-bottom:none}
+  td.tip{color:var(--warn);white-space:normal;min-width:140px}
+  td.err{color:var(--err);font-weight:600}
+  td.ok{color:var(--ok)}
+
+  .out-actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .note{margin-top:14px;font-size:11.5px;color:var(--sub);line-height:2;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+  .note b{color:var(--blue)}
+  .foot{text-align:center;color:var(--sub);opacity:.6;font-size:11px;margin-top:26px;letter-spacing:1px}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="topbar"></div>
+  <div class="wrap">
+    <h1>名片数据生成器</h1>
+    <p class="subtitle">
+      把 Excel 里的全公司名片表转换成 <b>cards.js</b>。流程：行政填 Excel → 全选复制 →
+      粘贴到下面 → 预览确认 → 下载 cards.js 替换项目里的同名文件 → 重新部署。
+      公司公共信息（LOGO/地址/业务/视频）在 company.js，不受本工具影响。
+    </p>
+
+    <!-- ① 模板 -->
+    <section class="step">
+      <div class="step-head"><span class="step-num">1</span><h2>下载模板发给同事填写</h2><small>Excel 直接打开，别改表头</small></div>
+      <button class="btn ghost" id="btn-tpl" type="button">下载 Excel 模板（.csv）</button>
+    </section>
+
+    <!-- ② 导入 -->
+    <section class="step">
+      <div class="step-head"><span class="step-num">2</span><h2>导入填好的表格</h2><small>两种方式任选</small></div>
+      <textarea id="paste" placeholder="方式 A：打开填好的 Excel，框选全部数据（含表头），Ctrl+C 复制，回到这里 Ctrl+V 粘贴…" spellcheck="false"></textarea>
+      <div class="or">或</div>
+      <div class="file-line">
+        <label class="file-label">选择 .csv 文件<input type="file" id="csvfile" accept=".csv,.txt"></label>
+        <span class="file-name" id="file-name">Excel 里「另存为 → CSV」的文件也可以</span>
+      </div>
+    </section>
+
+    <!-- ③ 预览 -->
+    <section class="step">
+      <div class="step-head"><span class="step-num">3</span><h2>预览确认</h2><small>粘贴 / 选择文件后自动解析</small></div>
+      <div class="stats" id="stats"></div>
+      <div class="tablewrap" id="tablewrap"><table><thead><tr>
+        <th>#</th><th>姓名</th><th>部门</th><th>职位</th><th>手机</th><th>邮箱</th><th>名片链接 id</th><th>提示</th>
+      </tr></thead><tbody id="tbody"></tbody></table></div>
+    </section>
+
+    <!-- ④ 生成 -->
+    <section class="step">
+      <div class="step-head"><span class="step-num">4</span><h2>生成 cards.js 与分享页</h2><small>数据文件 + 每人微信分享中转页</small></div>
+      <textarea id="output" readonly placeholder="确认预览无误后，这里会生成 cards.js 内容…"></textarea>
+      <div class="out-actions">
+        <button class="btn" id="btn-dl" type="button" disabled>下载 cards.js</button>
+        <button class="btn ghost" id="btn-copy" type="button" disabled>复制内容</button>
+        <button class="btn ghost" id="btn-pages" type="button" disabled>下载微信分享中转页</button>
+      </div>
+      <div class="note">
+        <b>别忘了图片：</b>表里填写的头像 / 微信二维码图片文件，统一放进项目的 <b>photos/</b> 文件夹
+        （文件名与表格一致，工具会自动加上 ./photos/ 前缀）。没放图片也不会报错——
+        头像会自动显示姓名首字，二维码显示占位提示。
+      </div>
+      <div class="note">
+        <b>微信链接卡片（重点）：</b>「下载微信分享中转页」会为每人生成一个 <b>工号.html</b> 文件，
+        全部放入项目的 <b>s/</b> 文件夹再部署。之后转发名片链接到微信，卡片就会显示
+        <b>本人照片 + 姓名·职位 + 电话简介</b>（而不是通用图标）。浏览器可能弹窗询问
+        「允许下载多个文件」，点允许即可。
+      </div>
+    </section>
+
+    <p class="foot">— 名片数据生成器 · 仅本地转换，不上传任何数据 —</p>
+  </div>
+</div>
+
+<script src="./company.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* =========================================================
+ * 模板列定义（顺序即无表头时的默认列序）
+ * ========================================================= */
+const COLS = [
+  { key:"id",         head:"ID",           alias:["id","工号","编号"] },
+  { key:"name",       head:"姓名",         alias:["姓名","名字"] },
+  { key:"dept",       head:"部门",         alias:["部门","所属部门"] },
+  { key:"title",      head:"职位",         alias:["职位","职务","岗位"] },
+  { key:"phone",      head:"手机",         alias:["手机","手机号","电话","联系方式"] },
+  { key:"email",      head:"邮箱",         alias:["邮箱","email","邮件"] },
+  { key:"wechatId",   head:"微信号",       alias:["微信号","微信"] },
+  { key:"avatar",     head:"头像图片",     alias:["头像","头像图片","头像文件","照片"] },
+  { key:"wechatQR",   head:"微信二维码图片",alias:["二维码","微信二维码","微信二维码图片"] },
+  { key:"bio",        head:"个人简介",     alias:["简介","个人简介","介绍"] },
+  { key:"visitCount", head:"访问数",       alias:["访问数","访问量","浏览量"] }
+];
+
+let parsed = [];          /* 解析结果：{...字段, _tips:[]} */
+let generatedText = "";   /* 生成的 cards.js 文本 */
+let oldVisit = {};        /* 旧 cards.js 的 id → visitCount（能取到就用于保留） */
+
+/* ---------- ① 生成模板 CSV（带 BOM，Excel 打开中文不乱码） ---------- */
+$("btn-tpl").addEventListener("click", () => {
+  const head = COLS.map(c => c.head).join(",");
+  const demo = "zhaoyun,赵 允,人力资源部,HR,186 1122 6701,hr@gjian.com,186 1122 6701,赵允.jpg,微信二维码.jpg,一句话个人简介（可留空）,128";
+  const rows = [head, demo, ",李示范,销售部,销售总监,138 0000 0000,demo@gjian.com,demo-wechat,,,这是示例行，正式使用时删除,56"];
+  const csv = String.fromCharCode(0xFEFF) + rows.join("\r\n") + "\r\n";
+  downloadBlob(csv, "名片模板.csv", "text/csv;charset=utf-8");
+});
+
+function downloadBlob(text, filename, mime){
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/* ---------- ② 输入：粘贴 TSV / 上传 CSV ---------- */
+$("paste").addEventListener("input", function(){ parseText(this.value, "粘贴内容"); });
+$("csvfile").addEventListener("change", async function(){
+  const f = this.files[0];
+  if (!f) return;
+  $("file-name").textContent = "已选择：" + f.name;
+  parseText(await readFileText(f), f.name);
+});
+
+/* CSV 编码自适应：BOM → UTF-8；无 BOM 先按 UTF-8 严格解码，失败按 GBK */
+async function readFileText(file){
+  const buf = await file.arrayBuffer();
+  if (buf.byteLength >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF)
+    return new TextDecoder("utf-8").decode(buf.slice(3));
+  try { return new TextDecoder("utf-8", { fatal:true }).decode(buf); }
+  catch(e){ return new TextDecoder("gbk").decode(buf); }
+}
+
+/* ---------- 解析主流程 ---------- */
+async function parseText(text, source){
+  const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim() !== "");
+  if (lines.length === 0){ setStats("「" + source + "」里没有数据，请先粘贴或选择文件", true); return; }
+
+  /* 分隔符：优先 Tab（Excel 直接粘贴），否则逗号 */
+  const delim = lines[0].indexOf("\t") !== -1 ? "\t" : ",";
+  const rows = lines.map(l => splitLine(l, delim));
+
+  /* 表头识别：第一行包含"姓名"则按表头映射列（列顺序可乱）；否则按模板默认列序 */
+  let map = null;
+  const first = rows[0].map(c => normHead(c));
+  if (first.some(h => h === "姓名")){
+    map = {};
+    COLS.forEach(col => {
+      const i = first.findIndex(h => h === normHead(col.head) || col.alias.some(a => h === normHead(a)));
+      if (i !== -1) map[col.key] = i;
+    });
+    rows.shift();
+  }
+
+  /* 旧访问数：同源部署时自动读取，表里留空的沿用旧值 */
+  oldVisit = await loadOldVisit();
+
+  parsed = [];
+  const usedIds = {};
+  rows.forEach((r, idx) => {
+    const get = k => {
+      const i = map ? map[k] : COLS.findIndex(c => c.key === k);
+      return i != null && i !== -1 && r[i] != null ? String(r[i]).trim() : "";
+    };
+    const tips = [];
+    const name = get("name");
+    if (!name){ tips.push("缺姓名，本行已跳过"); parsed.push({ _skip:true, _tips:tips, name:"(空)" }); return; }
+
+    let id = get("id");
+    if (!id){
+      const digits = get("phone").replace(/\D/g, "");
+      id = digits.length >= 6 ? digits.slice(-6) : "card" + (idx + 1);
+      tips.push("ID 留空，已自动生成：" + id);
+    }
+    if (usedIds[id]){ id = id + "-" + (usedIds[id] = (usedIds[id] || 1) + 1); tips.push("ID 重复，已改为：" + id); }
+    else usedIds[id] = 1;
+
+    const phone = get("phone");
+    if (phone && phone.replace(/\D/g, "").length < 6) tips.push("手机位数好像不对");
+    const email = get("email");
+    if (email && email.indexOf("@") === -1) tips.push("邮箱缺少 @");
+
+    let avatar = normalizePath(get("avatar"));
+    let wechatQR = normalizePath(get("wechatQR"));
+    if (get("avatar") && avatar !== get("avatar")) tips.push("头像路径已规范为 " + avatar);
+
+    let vc = parseInt(get("visitCount"), 10);
+    if (isNaN(vc)){
+      vc = (oldVisit[id] != null) ? oldVisit[id] : 0;
+      if (oldVisit[id] != null) tips.push("访问数沿用旧值 " + vc);
+    }
+
+    parsed.push({
+      id, name,
+      dept:     get("dept"),
+      title:    get("title"),
+      phone, email,
+      wechatId: get("wechatId") || phone,
+      wechatQR, avatar,
+      bio:      get("bio"),
+      visitCount: vc,
+      _tips: tips
+    });
+  });
+
+  renderPreview(source);
+}
+
+function normHead(s){ return String(s || "").trim().toLowerCase().replace(/\s+/g, ""); }
+function normalizePath(p){
+  p = String(p || "").trim();
+  if (!p || /^(https?:)?\/\//i.test(p) || p.startsWith("./") || p.startsWith("/")) return p;
+  return "./photos/" + p;
+}
+
+/* 带引号的 CSV 行拆分（Excel 另存的 CSV 可能含引号包裹） */
+function splitLine(line, delim){
+  const out = []; let cur = ""; let q = false;
+  for (let i = 0; i < line.length; i++){
+    const ch = line[i];
+    if (q){
+      if (ch === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else q = false; }
+      else cur += ch;
+    } else {
+      if (ch === '"') q = true;
+      else if (ch === delim){ out.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/* 旧访问数读取：仅 http(s) 部署时可取到；file:// 打开时静默跳过 */
+async function loadOldVisit(){
+  if (!/^https?:/i.test(location.protocol)) return {};
+  try {
+    const txt = await (await fetch("./cards.js", { cache:"no-store" })).text();
+    const map = {};
+    txt.replace(/\{[^{}]*\}/g, blk => {
+      const id = blk.match(/id:\s*["']([^"']+)["']/);
+      const vc = blk.match(/visitCount:\s*(\d+)/);
+      if (id && vc) map[id[1]] = parseInt(vc[1], 10);
+      return "";
+    });
+    return map;
+  } catch(e){ return {}; }
+}
+
+/* ---------- ③ 预览渲染 ---------- */
+function renderPreview(source){
+  const valid = parsed.filter(p => !p._skip);
+  const skipped = parsed.length - valid.length;
+  const warnRows = valid.filter(p => p._tips.length).length;
+  const depts = {};
+  valid.forEach(p => { if (p.dept) depts[p.dept] = 1; });
+
+  let html = "来源：" + esc(source) + " · 共 <b>" + parsed.length + "</b> 行，有效名片 <b>" + valid.length + "</b> 张，涉及 <b>" + Object.keys(depts).length + "</b> 个部门";
+  if (skipped) html += '，<span class="warn">跳过 ' + skipped + " 行（缺姓名）</span>";
+  if (warnRows) html += '，<span class="warn">' + warnRows + " 行有提示（见下表，不影响生成）</span>";
+  setStats(html);
+
+  const tb = $("tbody");
+  tb.innerHTML = "";
+  parsed.forEach((p, i) => {
+    const tr = document.createElement("tr");
+    const link = p._skip ? "—" : "card.html?id=" + p.id;
+    tr.innerHTML =
+      "<td>" + (i + 1) + "</td>" +
+      '<td class="' + (p._skip ? "err" : "") + '">' + esc(p.name) + "</td>" +
+      "<td>" + esc(p.dept) + "</td>" +
+      "<td>" + esc(p.title) + "</td>" +
+      "<td>" + esc(p.phone) + "</td>" +
+      "<td>" + esc(p.email) + "</td>" +
+      '<td class="ok">' + esc(link) + "</td>" +
+      '<td class="tip">' + (p._tips.length ? esc(p._tips.join("；")) : "") + "</td>";
+    tb.appendChild(tr);
+  });
+  $("tablewrap").classList.add("show");
+
+  if (valid.length === 0){
+    generatedText = "";
+    $("btn-dl").disabled = $("btn-copy").disabled = true;
+    return;
+  }
+  generatedText = buildCardsJs(valid);
+  $("output").value = generatedText;
+  $("btn-dl").disabled = $("btn-copy").disabled = false;
+}
+
+function setStats(html, isError){
+  const s = $("stats");
+  s.innerHTML = html;
+  s.classList.add("show");
+  if (isError){ $("tablewrap").classList.remove("show"); }
+}
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, m =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]);
+}
+
+/* ---------- ④ 生成 cards.js ---------- */
+function jsStr(v){ return "'" + String(v == null ? "" : v).replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "'"; }
+
+function buildCardsJs(list){
+  const today = new Date().toLocaleDateString("zh-CN");
+  const head =
+"/* =========================================================\n" +
+" *  ★ 人员名片数据（由 make-cards.html 生成于 " + today + "）★\n" +
+" *  重新生成时直接覆盖本文件即可，公司公共信息在 company.js，不受影响。\n" +
+" *  也可手动增删改：每个 { } 块是一张名片，id 是唯一标识（card.html?id=xxx）。\n" +
+" * ========================================================= */\n" +
+"const CARDS = [\n";
+  const body = list.map(c =>
+"  {\n" +
+"    id:         " + jsStr(c.id)       + ",\n" +
+"    name:       " + jsStr(c.name)     + ",\n" +
+"    dept:       " + jsStr(c.dept)     + ",\n" +
+"    title:      " + jsStr(c.title)    + ",\n" +
+"    bio:        " + jsStr(c.bio)      + ",\n" +
+"    phone:      " + jsStr(c.phone)    + ",\n" +
+"    email:      " + jsStr(c.email)    + ",\n" +
+"    wechatId:   " + jsStr(c.wechatId) + ",\n" +
+"    wechatQR:   " + jsStr(c.wechatQR) + ",\n" +
+"    avatar:     " + jsStr(c.avatar)   + ",\n" +
+"    visitCount: " + Number(c.visitCount || 0) + "\n" +
+"  }"
+  ).join(",\n");
+  return head + body + "\n];\n";
+}
+
+/* ---------- ⑤ 微信分享中转页（s/工号.html，每人生成一份） ----------
+ * 微信转发链接的卡片 = 标题(title) + 描述(meta description) + 缩略图(页面第一张图)。
+ * card.html 一套模板服务所有人，微信抓到的是通用信息；每人一份静态中转页
+ * 写死本人的 照片/姓名/简介，打开时自动跳到 card.html?id=xxx，体验不变。
+ * 注意：s/ 在子目录，页面里的 ./photos/... 要改写成 ../photos/... */
+function relPath(p){
+  p = String(p || "").trim();
+  if (/^https?:/i.test(p) || p.startsWith("../") || p.startsWith("/")) return p;
+  return "../" + p.replace(/^\.\/+/, "");
+}
+
+function buildSharePage(c){
+  const co    = (typeof COMPANY !== "undefined" && COMPANY.company) || "";
+  const photo = c.avatar ? relPath(c.avatar) : relPath((COMPANY && COMPANY.logo) || "./广监云.png");
+  const title = c.name + (c.title ? " · " + c.title : "") + (co ? "｜" + co : "");
+  const desc  = [co, c.phone ? "电话 " + c.phone : "", c.bio || ""].filter(Boolean).join("｜");
+
+  return '<!DOCTYPE html>\n' +
+'<html lang="zh-CN">\n' +
+'<head>\n' +
+'<meta charset="UTF-8">\n' +
+'<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
+'<title>' + esc(title) + '</title>\n' +
+'<meta name="description" content="' + esc(desc) + '">\n' +
+'<style>\n' +
+'*{margin:0;padding:0;box-sizing:border-box}\n' +
+'body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff}\n' +
+'.top{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#0044E6,#20C4C4)}\n' +
+'.sp{text-align:center;padding:0 30px}\n' +
+'.av{width:78px;height:78px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 2.5px rgba(0,68,230,.85),0 10px 24px rgba(0,30,90,.14)}\n' +
+'.sp h1{margin-top:14px;font-size:20px;color:#1A1A1A;letter-spacing:1px}\n' +
+'.sp p{margin-top:6px;font-size:12.5px;color:#666}\n' +
+'.bar{width:34px;height:3px;border-radius:2px;margin:13px auto 0;background:linear-gradient(90deg,#0044E6,#20C4C4)}\n' +
+'.tip{margin-top:14px;color:#999;font-size:11.5px;letter-spacing:1px}\n' +
+'.manual{display:inline-block;margin-top:18px;padding:8px 22px;border-radius:99px;font-size:12px;color:#0044E6;text-decoration:none;border:1px solid rgba(0,68,230,.3)}\n' +
+'</style>\n' +
+'</head>\n' +
+'<body>\n' +
+'<!-- 微信抓取的第一张图 = 卡片缩略图（本人照片，无头像时为公司 LOGO） -->\n' +
+'<img src="' + esc(photo) + '" style="position:absolute;left:-9999px;top:0;width:300px;height:300px" alt="">\n' +
+'<div class="top"></div>\n' +
+'<div class="sp">\n' +
+'  <img class="av" src="' + esc(photo) + '" alt="' + esc(c.name) + '" onerror="this.style.visibility=\'hidden\'">\n' +
+'  <h1>' + esc(c.name) + '</h1>\n' +
+'  <p>' + esc([c.title, co].filter(Boolean).join("｜")) + '</p>\n' +
+'  <div class="bar"></div>\n' +
+'  <p class="tip">正在打开数字名片…</p>\n' +
+'  <a class="manual" href="../card.html?id=' + encodeURIComponent(c.id) + '">若未自动打开，点这里</a>\n' +
+'</div>\n' +
+'<script>location.replace("../card.html?id=' + encodeURIComponent(c.id) + '");</' + 'script>\n' +
+'</body>\n' +
+'</html>';
+}
+
+/* 批量下载全部分享中转页（间隔 350ms，规避浏览器多下载拦截） */
+$("btn-pages").addEventListener("click", () => {
+  const valid = parsed.filter(p => !p._skip);
+  if (!valid.length) return;
+  const btn = $("btn-pages"), old = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "正在下载 " + valid.length + " 个文件…";
+  valid.forEach((c, i) => setTimeout(() => {
+    downloadBlob(buildSharePage(c), c.id + ".html", "text/html;charset=utf-8");
+    if (i === valid.length - 1){
+      btn.textContent = "已下载，请全部放入 s/ 文件夹";
+      setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 3000);
+    }
+  }, i * 350));
+});
+
+$("btn-dl").addEventListener("click", () => {
+  if (generatedText) downloadBlob(generatedText, "cards.js", "application/javascript;charset=utf-8");
+});
+$("btn-copy").addEventListener("click", () => {
+  $("output").select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch(e){}
+  if (ok || document.queryCommandSupported("copy")) copyToast(ok);
+  else copyToast(false);
+});
+function copyToast(ok){
+  const old = $("btn-copy").textContent;
+  $("btn-copy").textContent = ok ? "已复制" : "复制失败，请手动全选复制";
+  setTimeout(() => $("btn-copy").textContent = old, 1800);
+}
+</script>
+</body>
+</html>

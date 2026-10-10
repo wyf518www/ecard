@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="format-detection" content="telephone=no,email=no,address=no">
+<meta name="description" content="公司数字名片墙">
+<title>数字名片 · 名片墙</title>
+<style>
+  :root{
+    --blue:#0044E6;
+    --cyan:#20C4C4;
+    --ink:#1A1A1A;
+    --sub:#666666;
+    --line:#EDF1F7;
+    --panel:#F7F9FE;
+    --blue-soft:rgba(0,68,230,.08);
+    --cyan-soft:rgba(32,196,196,.28);
+    --radius:22px;
+    --shadow:0 18px 46px rgba(0,30,90,.10);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei","Source Han Sans SC",sans-serif;
+    background:#fff;min-height:100vh;
+    display:flex;justify-content:center;align-items:flex-start;
+    padding:22px 14px calc(40px + env(safe-area-inset-bottom));
+  }
+  .page{width:100%;max-width:420px}
+
+  /* ===== 头部 ===== */
+  .head{
+    position:relative;text-align:center;overflow:hidden;
+    border-radius:var(--radius);border:1px solid var(--line);box-shadow:var(--shadow);
+    padding:30px 20px 26px;background:#fff;
+  }
+  .topbar{height:4px;background:linear-gradient(90deg,var(--blue) 0%,var(--cyan) 100%)}
+  .head .deco{position:absolute;border-radius:50%;pointer-events:none}
+  .d1{width:190px;height:190px;right:-75px;top:-85px;background:rgba(0,68,230,.045)}
+  .d2{width:120px;height:120px;left:-55px;bottom:-48px;background:rgba(32,196,196,.06)}
+  .head img.logo{height:34px;max-width:150px;object-fit:contain;position:relative;z-index:1}
+  .head h1{position:relative;z-index:1;font-size:19px;font-weight:700;letter-spacing:1.5px;margin-top:12px;color:var(--ink)}
+  .head .divider{
+    position:relative;z-index:1;width:36px;height:3px;border-radius:2px;margin:12px auto 0;
+    background:linear-gradient(90deg,var(--blue),var(--cyan));
+  }
+  .head .sub{position:relative;z-index:1;margin-top:12px;font-size:12px;color:var(--sub);letter-spacing:1px}
+  .head .sub b{color:var(--blue);font-variant-numeric:tabular-nums}
+
+  /* ===== 搜索 ===== */
+  .searchbar{
+    position:relative;margin:16px 0 4px;
+  }
+  .searchbar svg{
+    position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    width:17px;height:17px;color:var(--sub);pointer-events:none;
+    fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  }
+  .searchbar input{
+    width:100%;height:44px;border:1px solid var(--line);border-radius:14px;
+    background:var(--panel);padding:0 14px 0 40px;font-family:inherit;
+    font-size:13.5px;color:var(--ink);outline:none;transition:border-color .15s,background .15s,box-shadow .15s;
+  }
+  .searchbar input:focus{
+    border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(0,68,230,.10);
+  }
+  .searchbar input::placeholder{color:#AAB3BF}
+
+  /* ===== 部门分组 ===== */
+  .dept{margin-top:18px}
+  .dept-head{
+    display:flex;align-items:baseline;gap:8px;margin:0 4px 10px;
+  }
+  .dept-head h2{font-size:15px;color:var(--ink);letter-spacing:1px}
+  .dept-head span{font-size:11px;color:var(--cyan);letter-spacing:1px;font-weight:600}
+  .dept-head i{flex:1;height:1px;background:var(--line)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (min-width:520px){ .grid{grid-template-columns:1fr 1fr 1fr} .page{max-width:640px} }
+
+  .p-card{
+    display:flex;flex-direction:column;align-items:center;text-align:center;gap:0;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:18px 10px 15px;text-decoration:none;
+    transition:background .15s,border-color .15s;
+  }
+  .p-card:active{background:#fff;border-color:rgba(0,68,230,.35)}
+  .p-card .avatar{
+    width:62px;height:62px;border-radius:50%;object-fit:cover;background:#fff;
+    border:2.5px solid #fff;box-shadow:0 0 0 2px rgba(0,68,230,.55),0 6px 16px rgba(0,30,90,.12);
+  }
+  .p-card .name{margin-top:11px;font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .p-card .title{
+    margin-top:4px;font-size:11.5px;color:var(--sub);max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .p-card .go{
+    margin-top:9px;font-size:10.5px;color:var(--blue);letter-spacing:1px;
+    display:inline-flex;align-items:center;gap:3px;
+  }
+  .p-card .go svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ===== 空状态 / 底部 ===== */
+  .empty{
+    display:none;text-align:center;color:var(--sub);font-size:12.5px;
+    letter-spacing:1px;padding:46px 0 30px;line-height:2;
+  }
+  .empty.show{display:block}
+  .foot{text-align:center;color:var(--sub);opacity:.65;font-size:10.5px;margin-top:26px;letter-spacing:1px}
+</style>
+</head>
+<body>
+
+<!-- 微信转发链接时抓取的缩略图（勿删，不影响页面显示） -->
+<img src="./广监云.png" style="position:absolute;left:-9999px;top:0;width:120px;height:120px" alt="" aria-hidden="true">
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24">
+    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+  </symbol>
+</svg>
+
+<div class="page">
+
+  <!-- 头部：LOGO + 公司名 + 人数 -->
+  <header class="head">
+    <div class="deco d1"></div><div class="deco d2"></div>
+    <img class="logo" id="logo" alt="公司LOGO">
+    <h1 id="corp-name"></h1>
+    <div class="divider"></div>
+    <p class="sub">共 <b id="member-count">0</b> 位成员 · 点击查看数字名片</p>
+  </header>
+
+  <!-- 搜索 -->
+  <div class="searchbar">
+    <svg><use href="#i-search"/></svg>
+    <input id="kw" type="search" placeholder="搜索姓名 / 职位 / 部门" autocomplete="off">
+  </div>
+
+  <!-- 部门分组（JS 渲染） -->
+  <main id="groups"></main>
+
+  <!-- 搜索无结果 -->
+  <div class="empty" id="empty">
+    没有找到匹配的同事<br>换个关键词试试
+  </div>
+
+  <p class="foot">— 北京广监云科技有限公司 · 数字名片 —</p>
+</div>
+
+<script src="./company.js"></script>
+<script src="./cards.js"></script>
+<script>
+/* =========================================================
+ *  名片墙：读取 cards.js 渲染全员，按部门分组，支持搜索
+ * ========================================================= */
+const $ = id => document.getElementById(id);
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, m =>
+    ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[m]);
+}
+
+/* 姓名首字渐变占位头像（与 card.html 一致） */
+function initialsAvatar(name){
+  const ch = (name || "名").trim().charAt(0);
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="188" height="188">' +
+    '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+    '<stop offset="0" stop-color="#0044E6"/><stop offset="1" stop-color="#20C4C4"/>' +
+    '</linearGradient></defs>' +
+    '<rect width="188" height="188" fill="url(#g)"/>' +
+    '<text x="94" y="122" font-family="PingFang SC,Microsoft YaHei,sans-serif" ' +
+    'font-size="78" fill="#ffffff" text-anchor="middle">' + ch + '</text></svg>';
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+/* ---------- 头部 ---------- */
+document.title = COMPANY.company + " · 数字名片";
+if (COMPANY.logo){
+  const lg = $("logo");
+  lg.src = COMPANY.logo;
+  lg.onerror = function(){ lg.style.display = "none"; };
+}
+$("corp-name").textContent   = COMPANY.company;
+$("member-count").textContent = CARDS.length;
+
+/* ---------- 按部门分组（保持 cards.js 中的先后顺序） ---------- */
+const groups = [];
+const byDept = {};
+CARDS.forEach(c => {
+  const d = (c.dept || "").trim() || "其他";
+  if (!byDept[d]){ byDept[d] = []; groups.push(d); }
+  byDept[d].push(c);
+});
+
+const groupsEl = $("groups");
+groups.forEach(dept => {
+  const sec = document.createElement("section");
+  sec.className = "dept";
+  sec.dataset.dept = dept;
+  sec.innerHTML =
+    '<div class="dept-head"><h2>' + esc(dept) + '</h2>' +
+    '<span>' + byDept[dept].length + ' 人</span><i></i></div>' +
+    '<div class="grid"></div>';
+  const grid = sec.querySelector(".grid");
+
+  byDept[dept].forEach(c => {
+    const a = document.createElement("a");
+    a.className = "p-card";
+    a.href = "card.html?id=" + encodeURIComponent(c.id);
+    a.dataset.kw = [c.name, c.title, c.dept, c.company].filter(Boolean).join(" ").toLowerCase();
+    a.innerHTML =
+      '<img class="avatar" alt="' + esc(c.name) + '" src="' + esc(c.avatar || initialsAvatar(c.name)) + '">' +
+      '<span class="name">' + esc(c.name) + '</span>' +
+      '<span class="title">' + esc(c.title || "") + '</span>' +
+      '<span class="go">查看名片 <svg><use href="#i-arrow"/></svg></span>';
+    /* 头像加载失败 → 首字占位，避免裂图 */
+    const img = a.querySelector(".avatar");
+    img.onerror = function(){ this.onerror = null; this.src = initialsAvatar(c.name); };
+    grid.appendChild(a);
+  });
+
+  groupsEl.appendChild(sec);
+});
+
+/* ---------- 搜索：按姓名/职位/部门过滤 ---------- */
+$("kw").addEventListener("input", function(){
+  const kw = this.value.trim().toLowerCase();
+  let visible = 0;
+  document.querySelectorAll(".p-card").forEach(a => {
+    const hit = !kw || a.dataset.kw.indexOf(kw) !== -1;
+    a.style.display = hit ? "" : "none";
+    if (hit) visible++;
+  });
+  /* 整组都空了就隐藏分组标题 */
+  document.querySelectorAll(".dept").forEach(sec => {
+    const any = sec.querySelectorAll('.p-card:not([style*="none"])').length > 0;
+    sec.style.display = any ? "" : "none";
+  });
+  $("empty").classList.toggle("show", visible === 0);
+});
+</script>
+</body>
+</html>
