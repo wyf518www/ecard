@@ -133,12 +133,12 @@
 
     <!-- ④ 生成 -->
     <section class="step">
-      <div class="step-head"><span class="step-num">4</span><h2>生成 cards.js 与分享页</h2><small>数据文件 + 每人微信分享中转页</small></div>
+      <div class="step-head"><span class="step-num">4</span><h2>生成 cards.js 与分享页</h2><small>数据文件 + 每人微信分享预览页</small></div>
       <textarea id="output" readonly placeholder="确认预览无误后，这里会生成 cards.js 内容…"></textarea>
       <div class="out-actions">
         <button class="btn" id="btn-dl" type="button" disabled>下载 cards.js</button>
         <button class="btn ghost" id="btn-copy" type="button" disabled>复制内容</button>
-        <button class="btn ghost" id="btn-pages" type="button" disabled>下载微信分享中转页</button>
+        <button class="btn ghost" id="btn-pages" type="button" disabled>下载微信分享预览页</button>
       </div>
       <div class="note">
         <b>别忘了图片：</b>表里填写的头像 / 微信二维码图片文件，统一放进项目的 <b>photos/</b> 文件夹
@@ -146,7 +146,7 @@
         头像会自动显示姓名首字，二维码显示占位提示。
       </div>
       <div class="note">
-        <b>微信链接卡片（重点）：</b>「下载微信分享中转页」会为每人生成一个 <b>工号.html</b> 文件，
+        <b>微信链接卡片（重点）：</b>「下载微信分享预览页」会为每人生成一个 <b>工号.html</b> 文件，
         全部放入项目的 <b>s/</b> 文件夹再部署。之后转发名片链接到微信，卡片就会显示
         <b>本人照片 + 姓名·职位 + 电话简介</b>（而不是通用图标）。浏览器可能弹窗询问
         「允许下载多个文件」，点允许即可。
@@ -418,10 +418,10 @@ function buildCardsJs(list){
   return head + body + "\n];\n";
 }
 
-/* ---------- ⑤ 微信分享中转页（s/工号.html，每人生成一份） ----------
+/* ---------- ⑤ 微信分享预览页（s/工号.html，每人生成一份） ----------
  * 微信转发链接的卡片 = 标题(title) + 描述(meta description) + 缩略图(页面第一张图)。
- * card.html 一套模板服务所有人，微信抓到的是通用信息；每人一份静态中转页
- * 写死本人的 照片/姓名/简介，打开时自动跳到 card.html?id=xxx，体验不变。
+ * card.html 一套模板服务所有人，微信抓到的是通用信息；每人一份静态预览页
+ * 写入本人的照片/姓名/简介，先展示预览卡，点击后进入 card.html?id=xxx。
  * 注意：s/ 在子目录，页面里的 ./photos/... 要改写成 ../photos/... */
 function relPath(p){
   p = String(p || "").trim();
@@ -431,48 +431,112 @@ function relPath(p){
 
 function buildSharePage(c){
   const co    = (typeof COMPANY !== "undefined" && COMPANY.company) || "";
-  const photo = c.avatar ? relPath(c.avatar) : relPath((COMPANY && COMPANY.logo) || "./广监云.png");
+  const photo = c.avatar ? relPath(c.avatar) : relPath((typeof COMPANY !== "undefined" && COMPANY.logo) || "./广监云.png");
   const title = c.name + (c.title ? " · " + c.title : "") + (co ? "｜" + co : "");
   const desc  = [co, c.phone ? "电话 " + c.phone : "", c.bio || ""].filter(Boolean).join("｜");
+  const initial = Array.from(String(c.name || "").trim())[0] || "名";
+  const phone = String(c.phone || "").replace(/[^\d+]/g, "");
+  const link = "../card.html?id=" + encodeURIComponent(c.id);
 
-  return '<!DOCTYPE html>\n' +
-'<html lang="zh-CN">\n' +
-'<head>\n' +
-'<meta charset="UTF-8">\n' +
-'<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n' +
-'<title>' + esc(title) + '</title>\n' +
-'<meta name="description" content="' + esc(desc) + '">\n' +
-'<style>\n' +
-'*{margin:0;padding:0;box-sizing:border-box}\n' +
-'body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#fff}\n' +
-'.top{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#0044E6,#20C4C4)}\n' +
-'.sp{text-align:center;padding:0 30px}\n' +
-'.av{width:78px;height:78px;border-radius:50%;object-fit:cover;border:3px solid #fff;box-shadow:0 0 0 2.5px rgba(0,68,230,.85),0 10px 24px rgba(0,30,90,.14)}\n' +
-'.sp h1{margin-top:14px;font-size:20px;color:#1A1A1A;letter-spacing:1px}\n' +
-'.sp p{margin-top:6px;font-size:12.5px;color:#666}\n' +
-'.bar{width:34px;height:3px;border-radius:2px;margin:13px auto 0;background:linear-gradient(90deg,#0044E6,#20C4C4)}\n' +
-'.tip{margin-top:14px;color:#999;font-size:11.5px;letter-spacing:1px}\n' +
-'.manual{display:inline-block;margin-top:18px;padding:8px 22px;border-radius:99px;font-size:12px;color:#0044E6;text-decoration:none;border:1px solid rgba(0,68,230,.3)}\n' +
-'</style>\n' +
-'</head>\n' +
-'<body>\n' +
-'<!-- 微信抓取的第一张图 = 卡片缩略图（本人照片，无头像时为公司 LOGO） -->\n' +
-'<img src="' + esc(photo) + '" style="position:absolute;left:-9999px;top:0;width:300px;height:300px" alt="">\n' +
-'<div class="top"></div>\n' +
-'<div class="sp">\n' +
-'  <img class="av" src="' + esc(photo) + '" alt="' + esc(c.name) + '" onerror="this.style.visibility=\'hidden\'">\n' +
-'  <h1>' + esc(c.name) + '</h1>\n' +
-'  <p>' + esc([c.title, co].filter(Boolean).join("｜")) + '</p>\n' +
-'  <div class="bar"></div>\n' +
-'  <p class="tip">正在打开数字名片…</p>\n' +
-'  <a class="manual" href="../card.html?id=' + encodeURIComponent(c.id) + '">若未自动打开，点这里</a>\n' +
-'</div>\n' +
-'<script>location.replace("../card.html?id=' + encodeURIComponent(c.id) + '");</' + 'script>\n' +
-'</body>\n' +
-'</html>';
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F6FB">
+<meta name="format-detection" content="telephone=no">
+<title>${esc(title)}</title>
+<meta name="description" content="${esc(desc)}">
+<style>
+:root{--blue:#0044E6;--cyan:#20C4C4;--ink:#1A1A1A;--muted:#999;--paper:#fff;--mist:#F4F6FB}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  min-height:100vh;min-height:100svh;display:flex;align-items:center;justify-content:center;
+  padding:48px 24px;
+  padding:calc(48px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
+  color:var(--ink);background-color:var(--mist);
+  background-image:radial-gradient(ellipse at 8% 12%,rgba(0,68,230,.11),transparent 52%),radial-gradient(ellipse at 92% 88%,rgba(32,196,196,.13),transparent 52%);
+}
+.top{position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.sp{
+  position:relative;width:100%;max-width:380px;min-width:0;padding:36px 30px 22px;
+  text-align:center;background:var(--paper);border:1px solid rgba(0,68,230,.06);border-radius:24px;
+  box-shadow:0 24px 64px rgba(0,30,90,.12),0 2px 6px rgba(0,30,90,.06);
+  animation:fadeUp .65s cubic-bezier(.22,1,.36,1) both;
+}
+.sp::before{content:"";position:absolute;top:0;left:24px;right:24px;height:1px;background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.av{
+  position:relative;display:grid;place-items:center;width:84px;height:84px;margin:0 auto;border-radius:50%;
+  border:3px solid var(--paper);background:linear-gradient(135deg,var(--blue),var(--cyan));
+  box-shadow:0 0 0 2px rgba(0,68,230,.8),0 8px 20px rgba(0,30,90,.12);
+  color:#fff;font-size:32px;font-weight:600;line-height:1;overflow:hidden;
+}
+.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:var(--paper);border-radius:50%}
+.sp h1{margin-top:20px;font-size:22px;font-weight:700;line-height:1.45;letter-spacing:2px;overflow-wrap:anywhere}
+.company{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.8;letter-spacing:1px;overflow-wrap:anywhere}
+.role{display:inline-block;max-width:100%;margin-top:14px;padding:5px 14px;border-radius:99px;border:1px solid rgba(0,68,230,.16);background:rgba(0,68,230,.06);color:var(--blue);font-size:12px;line-height:1.6;letter-spacing:1px;overflow-wrap:anywhere}
+.contact{margin-top:26px;padding-top:22px;border-top:1px solid #EDF1F7}
+.phone{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;max-width:100%;min-height:48px;padding:7px 18px 7px 8px;
+  border:1px solid rgba(0,68,230,.15);border-radius:99px;background:#F4F7FF;color:var(--blue);text-decoration:none;
+  transition:background-color .18s,border-color .18s,color .18s;
+}
+.phone-icon{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border-radius:50%;background:var(--paper);box-shadow:0 2px 5px rgba(0,30,90,.06)}
+.phone-icon svg{width:16px;height:16px}
+.phone-number{min-width:0;font-size:16px;font-weight:600;line-height:1.5;letter-spacing:.8px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.phone:active{color:#087D82;background:rgba(32,196,196,.14);border-color:var(--cyan)}
+.phone:active .phone-icon{background:var(--cyan);color:#fff}
+.manual{display:flex;align-items:center;justify-content:center;gap:9px;width:fit-content;max-width:100%;min-height:44px;margin:16px auto 0;padding:8px 4px;color:#666;font-size:12px;line-height:1.7;letter-spacing:1px;text-decoration:none}
+.manual-label{min-width:0;overflow-wrap:anywhere}
+.manual::before{content:"";flex:0 0 6px;width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:breathe 1.8s ease-in-out infinite}
+.manual svg{flex:0 0 14px;width:14px;height:14px;color:var(--blue)}
+.manual:active{color:var(--blue)}
+a:focus-visible{outline:2px solid var(--blue);outline-offset:5px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes breathe{0%,100%{opacity:.6;box-shadow:0 0 0 0 rgba(32,196,196,0)}50%{opacity:1;box-shadow:0 0 0 4px rgba(32,196,196,.14)}}
+@media(max-width:400px){
+  body{padding:36px 18px;padding:calc(36px + env(safe-area-inset-top)) calc(18px + env(safe-area-inset-right)) calc(36px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left))}
+  .sp{padding:30px 24px 18px;border-radius:22px}
+  .av{width:78px;height:78px;font-size:30px}
+  .sp h1{margin-top:18px}.contact{margin-top:22px;padding-top:20px}
+}
+@media(max-width:359px){
+  body{padding:28px 12px;padding:calc(28px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
+  .sp{padding:26px 18px 16px;border-radius:20px}
+  .av{width:72px;height:72px;font-size:28px}.sp h1{font-size:20px}
+  .company{letter-spacing:.5px}.role{padding:4px 12px}
+  .contact{margin-top:20px;padding-top:18px}.phone{gap:8px;padding-right:14px}.phone-number{font-size:14px;letter-spacing:.5px}
+  .manual{font-size:11px;letter-spacing:.5px;margin-top:12px}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<!-- 微信抓取的第一张图 = 卡片缩略图（本人照片，无头像时为公司 LOGO） -->
+<img src="${esc(photo)}" style="position:absolute;left:-9999px;top:0;width:300px;height:300px" alt="" aria-hidden="true">
+<div class="top" aria-hidden="true"></div>
+<main class="sp" aria-labelledby="card-name">
+  <div class="av" role="img" aria-label="${esc(c.name)}的头像">
+    <span aria-hidden="true">${esc(initial)}</span>${c.avatar ? '\n    <img src="' + esc(relPath(c.avatar)) + '" alt="" onerror="this.remove()">' : ''}
+  </div>
+  <h1 id="card-name">${esc(c.name)}</h1>
+  ${co ? '<p class="company">' + esc(co) + '</p>' : ''}
+  ${c.title ? '<p class="role">' + esc(c.title) + '</p>' : ''}
+  ${phone ? `<div class="contact">
+    <a class="phone" href="tel:${esc(phone)}" aria-label="拨打电话 ${esc(c.phone)}">
+      <span class="phone-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.79a2 2 0 0 1-.45 2.11L8.09 9.89a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.33 1.83.56 2.79.69A2 2 0 0 1 22 16.92z"/></svg></span>
+      <span class="phone-number">${esc(c.phone)}</span>
+    </a>
+  </div>` : ''}
+  <a class="manual" href="${esc(link)}"><span class="manual-label">点击查看完整名片</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></a>
+</main>
+</body>
+</html>`;
 }
 
-/* 批量下载全部分享中转页（间隔 350ms，规避浏览器多下载拦截） */
+/* 批量下载全部分享预览页（间隔 350ms，规避浏览器多下载拦截） */
 $("btn-pages").addEventListener("click", () => {
   const valid = parsed.filter(p => !p._skip);
   if (!valid.length) return;

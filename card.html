@@ -806,9 +806,9 @@ function saveContact(){
 $("btn-vcf").addEventListener("click", saveContact);
 
 /* ---------- 分享名片：横版卡片图片 + 名片链接 ---------- */
-/* 当前名片的专属链接 —— 指向每人静态中转页 s/工号.html：
+/* 当前名片的专属链接 —— 指向每人静态预览页 s/工号.html：
  * 微信抓取它的静态标题/描述/第一张图（本人照片）生成分享卡片，
- * 打开后自动跳回 card.html?id=xxx。（s/ 页由 make-cards.html 生成部署） */
+ * 打开预览后，点击底部入口进入 card.html?id=xxx。（s/ 页由 make-cards.html 生成部署） */
 function cardLink(){
   const base = location.href.split("?")[0].split("/").slice(0, -1).join("/") + "/";
   return base + "s/" + encodeURIComponent(C.id) + ".html";
