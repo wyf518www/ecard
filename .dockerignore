@@ -1,0 +1,7 @@
+# 不打包进镜像的文件（注意：nginx.conf 需要 COPY 进镜像，不能忽略）
+使用说明.txt
+docker-compose.yml
+.dockerignore
+Dockerfile
+*.md
+.git

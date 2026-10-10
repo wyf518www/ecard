@@ -1,0 +1,10 @@
+# 一键启动：docker compose up -d --build
+# 停止：docker compose down
+# 注意：直接运行本文件时，文件名包含中文的目录路径已验证可用（Docker Desktop on Windows）
+services:
+  gjian-card:
+    build: .
+    container_name: gjian-card
+    ports:
+      - "8080:80"        # 宿主机端口 : 容器端口，8080 被占用可改左侧数字
+    restart: unless-stopped
