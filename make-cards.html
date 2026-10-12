@@ -101,7 +101,7 @@
     <h1>名片数据生成器</h1>
     <p class="subtitle">
       把 Excel 里的全公司名片表转换成 <b>cards.js</b>。流程：行政填 Excel → 全选复制 →
-      粘贴到下面 → 预览确认 → 下载 cards.js 替换项目里的同名文件 → 重新部署。
+      粘贴到下面 → 预览确认 → 更新 cards.js 和 s/ 分享预览页 → 重新部署。
       公司公共信息（LOGO/地址/业务/视频）在 company.js，不受本工具影响。
     </p>
 
@@ -137,8 +137,13 @@
       <textarea id="output" readonly placeholder="确认预览无误后，这里会生成 cards.js 内容…"></textarea>
       <div class="out-actions">
         <button class="btn" id="btn-dl" type="button" disabled>下载 cards.js</button>
-        <button class="btn ghost" id="btn-copy" type="button" disabled>复制内容</button>
+        <button class="btn ghost" id="btn-copy" type="button" disabled>复制 cards.js 内容</button>
         <button class="btn ghost" id="btn-pages" type="button" disabled>下载微信分享预览页</button>
+      </div>
+      <div class="note">
+        <b>导出方式：</b>「下载 cards.js」和「复制 cards.js 内容」任选一种，用于替换项目根目录的
+        <b>cards.js</b>（复制后需手动覆盖保存）。「下载微信分享预览页」可独立点击，
+        无需先下载或复制；把生成的 HTML 放入 <b>s/</b>。完整更新时，两类文件都要保存并重新部署。
       </div>
       <div class="note">
         <b>别忘了图片：</b>表里填写的头像 / 微信二维码图片文件，统一放进项目的 <b>photos/</b> 文件夹
@@ -182,6 +187,7 @@ const COLS = [
 let parsed = [];          /* 解析结果：{...字段, _tips:[]} */
 let generatedText = "";   /* 生成的 cards.js 文本 */
 let oldVisit = {};        /* 旧 cards.js 的 id → visitCount（能取到就用于保留） */
+let sharePagesDownloading = false;
 
 /* ---------- ① 生成模板 CSV（带 BOM，Excel 打开中文不乱码） ---------- */
 $("btn-tpl").addEventListener("click", () => {
@@ -222,7 +228,14 @@ async function readFileText(file){
 /* ---------- 解析主流程 ---------- */
 async function parseText(text, source){
   const lines = text.replace(/\r/g, "").split("\n").filter(l => l.trim() !== "");
-  if (lines.length === 0){ setStats("「" + source + "」里没有数据，请先粘贴或选择文件", true); return; }
+  if (lines.length === 0){
+    parsed = [];
+    generatedText = "";
+    $("output").value = "";
+    updateExportButtons();
+    setStats("「" + source + "」里没有数据，请先粘贴或选择文件", true);
+    return;
+  }
 
   /* 分隔符：优先 Tab（Excel 直接粘贴），否则逗号 */
   const delim = lines[0].indexOf("\t") !== -1 ? "\t" : ",";
@@ -366,14 +379,14 @@ function renderPreview(source){
   });
   $("tablewrap").classList.add("show");
 
-  if (valid.length === 0){
-    generatedText = "";
-    $("btn-dl").disabled = $("btn-copy").disabled = true;
-    return;
-  }
-  generatedText = buildCardsJs(valid);
+  generatedText = valid.length ? buildCardsJs(valid) : "";
   $("output").value = generatedText;
-  $("btn-dl").disabled = $("btn-copy").disabled = false;
+  updateExportButtons();
+}
+
+function updateExportButtons(){
+  $("btn-dl").disabled = $("btn-copy").disabled = !generatedText;
+  $("btn-pages").disabled = !generatedText || sharePagesDownloading;
 }
 
 function setStats(html, isError){
@@ -539,15 +552,20 @@ a:focus-visible{outline:2px solid var(--blue);outline-offset:5px}
 /* 批量下载全部分享预览页（间隔 350ms，规避浏览器多下载拦截） */
 $("btn-pages").addEventListener("click", () => {
   const valid = parsed.filter(p => !p._skip);
-  if (!valid.length) return;
+  if (!valid.length || sharePagesDownloading) return;
   const btn = $("btn-pages"), old = btn.textContent;
-  btn.disabled = true;
+  sharePagesDownloading = true;
+  updateExportButtons();
   btn.textContent = "正在下载 " + valid.length + " 个文件…";
   valid.forEach((c, i) => setTimeout(() => {
     downloadBlob(buildSharePage(c), c.id + ".html", "text/html;charset=utf-8");
     if (i === valid.length - 1){
       btn.textContent = "已下载，请全部放入 s/ 文件夹";
-      setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 3000);
+      setTimeout(() => {
+        btn.textContent = old;
+        sharePagesDownloading = false;
+        updateExportButtons();
+      }, 3000);
     }
   }, i * 350));
 });
